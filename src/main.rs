@@ -1,4 +1,4 @@
-use std::char::REPLACEMENT_CHARACTER;
+use regex::{Captures, Regex};
 use std::io::prelude::*;
 use std::net::TcpListener;
 use std::net::TcpStream;
@@ -31,10 +31,17 @@ fn handle_connection(mut stream: TcpStream) {
     stream.read(&mut buffer).unwrap();
 
     let incoming = String::from_utf8_lossy(&buffer[..]);
-    let body_with_padding: &str = incoming.split("\r\n\r\n").nth(1).expect("No body sent!!!");
+    let mut request_iter = incoming.split("\r\n\r\n").take(2);
+    let header: &str = request_iter.next().expect("No header sent!");
+    let body_with_padding: &str = request_iter.next().expect("No body sent!");
 
-    let end_of_body: usize = incoming.find('\n').unwrap();
-    let (body, _) = body_with_padding.split_at(end_of_body);
+    // get body {{{
+    let re = Regex::new(r"Content-Length: (\d*)").unwrap();
+    let length: Captures = re.captures_iter(header).nth(0).unwrap();
+    let length: &str = &length[1];
+    let length: usize = length.parse().expect("NAN Content-Type length");
+    let (body, _) = body_with_padding.split_at(length);
+    // }}}
 
     let mut body_iter = body.split("::").take(2);
     let message_type: &str = body_iter.next().expect("No type sent!");
@@ -50,6 +57,7 @@ fn handle_connection(mut stream: TcpStream) {
     };
     println!("message: {:?}", message);
 
+    // Respond {{{
     let contents = "Recorded!".to_string();
     let response = format!(
         "HTTP/1.1 200 OK\r\nContent-Length: {}\r\n\r\n{}",
@@ -58,4 +66,5 @@ fn handle_connection(mut stream: TcpStream) {
     );
     stream.write(response.as_bytes()).unwrap();
     stream.flush().unwrap();
+    // }}}
 }
