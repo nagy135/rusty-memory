@@ -31,14 +31,16 @@ fn handle_connection(mut stream: TcpStream) {
     stream.read(&mut buffer).unwrap();
 
     let incoming = String::from_utf8_lossy(&buffer[..]);
-    let body: &str = incoming.split("\r\n\r\n").nth(1).expect("No body sent!!!");
+    let body_with_padding: &str = incoming.split("\r\n\r\n").nth(1).expect("No body sent!!!");
+
+    let end_of_body: usize = incoming.find('\n').unwrap();
+    let (body, _) = body_with_padding.split_at(end_of_body);
 
     let message = Message {
         kind: Kind::Todo,
         content: &incoming,
     };
-    println!("Request: {:?}", message);
-    println!("parts: {:?}", body);
+    println!("body: {:?}", body);
     let contents = "Recorded!".to_string();
     let response = format!(
         "HTTP/1.1 200 OK\r\nContent-Length: {}\r\n\r\n{}",
