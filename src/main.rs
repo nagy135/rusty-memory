@@ -36,18 +36,26 @@ fn handle_connection(mut stream: TcpStream) {
     let end_of_body: usize = incoming.find('\n').unwrap();
     let (body, _) = body_with_padding.split_at(end_of_body);
 
-    let message = Message {
-        kind: Kind::Todo,
-        content: &incoming,
+    let mut body_iter = body.split("::").take(2);
+    let message_type: &str = body_iter.next().expect("No type sent!");
+    let message_content: &str = body_iter.next().expect("No content sent!");
+
+    let message_kind = match message_type {
+        "type:note" => Kind::Note,
+        _ => Kind::Todo,
     };
-    println!("body: {:?}", body);
+    let message = Message {
+        kind: message_kind,
+        content: &message_content,
+    };
+    println!("message: {:?}", message);
+
     let contents = "Recorded!".to_string();
     let response = format!(
         "HTTP/1.1 200 OK\r\nContent-Length: {}\r\n\r\n{}",
         contents.len(),
         contents
     );
-
     stream.write(response.as_bytes()).unwrap();
     stream.flush().unwrap();
 }
