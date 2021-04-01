@@ -3,6 +3,9 @@ use std::io::prelude::*;
 use std::net::TcpListener;
 use std::net::TcpStream;
 
+const URL: &'static str = "127.0.0.1";
+const PORT: &'static str = "7878";
+
 #[derive(Debug)]
 enum Kind {
     Todo,
@@ -16,7 +19,13 @@ struct Message<'a> {
 }
 
 fn main() {
-    let listener = TcpListener::bind("127.0.0.1:7878").unwrap();
+    create_server();
+}
+
+fn create_server() {
+    let address: &str = &format!("{}:{}", URL, PORT);
+    let listener = TcpListener::bind(address).unwrap();
+    println!("Running server on {}", address);
 
     for stream in listener.incoming() {
         let stream = stream.unwrap();
@@ -52,7 +61,10 @@ fn handle_connection<'a>(mut stream: TcpStream) -> Result<&'a str, &'a str> {
 
     // clean up body {{{
     let re = Regex::new(r"Content-Length: (\d*)").unwrap();
-    let length: Captures = re.captures_iter(header).nth(0).unwrap();
+    let length: Captures = match re.captures_iter(header).next() {
+        Some(length) => length,
+        None => return Err("No Content-Length sent!"),
+    };
     let length: &str = &length[1];
     let length: usize = match length.parse() {
         Ok(length) => length,
@@ -64,11 +76,11 @@ fn handle_connection<'a>(mut stream: TcpStream) -> Result<&'a str, &'a str> {
     let mut body_iter = body.split("::").take(2);
     let message_type: &str = match body_iter.next() {
         Some(message_type) => message_type,
-        None => return Err("Type not sent!"),
+        None => return Err("Type not sent! (before ::)"),
     };
     let message_content: &str = match body_iter.next() {
         Some(message_content) => message_content,
-        None => return Err("Content not sent!"),
+        None => return Err("Content not sent! (after ::)"),
     };
 
     let message_kind = match message_type {
