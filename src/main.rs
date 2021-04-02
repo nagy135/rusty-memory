@@ -1,4 +1,4 @@
-mod json;
+mod parser;
 mod server;
 
 fn main() {
@@ -7,18 +7,9 @@ fn main() {
 
 #[cfg(test)]
 mod tests {
-    use super::json;
+    use super::parser;
     #[test]
-    fn obj() {
-        assert_eq!(
-            json::parse("{\"key\": \"val\"}"),
-            json::Object {
-                key_vals: vec![Box::new(json::KeyVal {
-                    key: "key",
-                    val: Box::new("val")
-                })]
-            }
-        );
-        ()
+    fn it_works() {
+        assert_eq!(4, 2 + 2);
     }
 }
